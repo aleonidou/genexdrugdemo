@@ -1,24 +1,12 @@
-#
+# ============================================ #
 # ICR BIC GDSC workshop
-#
+# https://github.com/DrJCampbell/genexdrugdemo
+# ============================================ #
 
-# can change the next line to the
-# directory where your files are
-setwd("/Users/jamesc/Dropbox/Bioinformatics_course_materials")
+# change the next line to the directory where your files are
+setwd("./")
 
-
-
-
-# read in the expression, mutation
-# and copy number data for cell lines
-#predictors <- read.table(
-#	file="en_input_w5.csv",
-#	header=TRUE,
-#	sep=",",
-#	row.names=1
-#	)
-
-
+# file with gene mutations and copy number calls
 mutation_data <- read.table(
 	file="gdsc_CNV_mutation_predictors.txt",
 	sep="\t",
@@ -26,6 +14,7 @@ mutation_data <- read.table(
 	row.names=1
 	)
 
+# drug IC50 values
 drug_data <- read.table(
 	file="gdsc_ic50_data.txt",
 	sep="\t",
@@ -34,6 +23,7 @@ drug_data <- read.table(
 	stringsAsFactors=FALSE
 	)
 
+# additional information about the cancer cell lines (site etc.)
 cell_line_info <- read.table(
 	file="gdsc_cell_line_info.txt",
 	sep="\t",
