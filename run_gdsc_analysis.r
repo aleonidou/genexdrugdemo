@@ -161,6 +161,16 @@ boxplot_drugIC50_by_mutation(
 	)
 
 
+boxplot_drugIC50_by_copy_number(
+	results=comb_data_cnv_spearman_results[which(
+		comb_data_cnv_spearman_results$p.value <= 0.0000001
+		),],
+	scores=comb_data$drugs,
+	mutations=comb_data$mutations,
+	filename="boxplots_drug_IC50_by_copy)number.pdf"
+	)
+
+
 boxplot_drugIC50_by_mutation <- function(
 	results,
 	scores,
@@ -211,3 +221,29 @@ boxplot_drugIC50_by_mutation <- function(
 	}		
 	dev.off()
 }
+
+
+boxplot_drugIC50_by_copy_number <- function(
+	results,
+	scores,
+	mutations,
+	filename
+	){
+	pdf(file=filename, width=10, height=3.5)
+	# turn off boxes for plots
+	par(bty="n", tcl=-0.2, mai=c(1, 0.95, 0.1, 0.1)) 
+	i <- NULL
+	for(i in 1:nrow(results)){
+		# boxplot IC50 dependent on CP
+		boxplot(
+			scores[,results$drug[i]] ~ mutations[,results$marker[i]]
+			)
+		mtext(results$marker[i], 1, line=2, cex=0.8)
+		mtext("copy number", 1, line=3, cex=0.8)
+		mtext(results$drug[i], 2, line=3, cex=0.8)
+		mtext("log10 IC50 (µM)", 2, line=2, cex=0.8)
+	}		
+	dev.off()
+}
+
+
