@@ -6,6 +6,13 @@
 # change the next line to the directory where your files are
 setwd("./")
 
+# check this is installed...
+require(gplots)
+
+# source (read in) some code in the
+# following file.
+source("./run_gdsc_functions.r")
+
 # file with gene mutations and copy number calls
 mutation_data <- read.table(
 	file="gdsc_CNV_mutation_predictors.txt",
@@ -13,6 +20,12 @@ mutation_data <- read.table(
 	header=TRUE,
 	row.names=1
 	)
+
+# mutation data now contains a table (data.frame) with
+# 624 rows corresponding to cancer cell lines and 510
+# columns corresponding to either mutation status [0/1]
+# or infered absolute copy number values
+
 
 # drug IC50 values
 drug_data <- read.table(
@@ -23,7 +36,14 @@ drug_data <- read.table(
 	stringsAsFactors=FALSE
 	)
 
-# additional information about the cancer cell lines (site etc.)
+# Similarly, mutation data now contains a table 
+# 707 rows corresponding to cancer cell lines and 140
+# columns corresponding to IC50 values of compounds
+
+
+
+# additional information about the cancer cell lines
+# (site etc.). This is not used and can be droppped
 cell_line_info <- read.table(
 	file="gdsc_cell_line_info.txt",
 	sep="\t",
@@ -40,6 +60,10 @@ common_cell_lines <- sort(
 		rownames(drug_data)
 		)
 	)
+# sort() sorts a list of things
+# intersect() finds the common things in two lists
+# rownames() gets the names of the rows in a table
+
 
 # make a list holding the tables of data with
 # the common cell lines
@@ -48,9 +72,86 @@ comb_data <- list(
 	drugs = drug_data[common_cell_lines,]
 	)
 
-# We can now run and analysis to identify drugs with 
+# mutation_data[common_cell_lines,] chooses rows
+# from mutation_data that are in common_cell_lines
+# and orders the rows as per common_cell_lines
+
+
+#
+# visualise the data sets
+#
+
+# create a colour pallete
+
+ic50_breaks=seq(-10, 10, by=0.2) 
+ic50_breaks=append(ic50_breaks, 40)
+ic50_breaks=append(ic50_breaks, -40, 0)
+ic50_col <- colorpanel(n=length(ic50_breaks)-1,low="blue", high="white")
+
+
+# avoiding clustering works OK
+image(
+	as.matrix(comb_data$drugs),
+	na.rm=TRUE,
+	col=ic50_col
+	)
+
+cnv_breaks=seq(0, 10, by=1) 
+#cnv_breaks=append(cnv_breaks, 40)
+#cnv_breaks=append(cnv_breaks, -40, 0)
+cnv_col <- colorpanel(n=length(cnv_breaks)-1,low="white",  high="red")
+
+pdf("mutation_data_heatmap_default.pdf", width=50, height=50)
+heatmap(
+	as.matrix(comb_data$mutations),
+	breaks=cnv_breaks,
+	col=cnv_col
+	)
+dev.off()
+
+
+
+# We can now run an analysis to identify drugs with 
 # IC50 values that differ between cell lines with 
 # different mutation status or CNV
+
+# first, try a single correlation test
+cor_example <- cor.test(
+	comb_data$mutations[,"BRAF.MUT"],
+	comb_data$drugs[,"PLX4720_RAF"],
+	na.rm=TRUE
+	)
+
+# look at the distribution
+hist(
+	comb_data$drugs[,"PLX4720_RAF"],
+	breaks=50,
+	xlab="PLX4720 (RAFi) IC50 (µM)",
+	main="Histogram showing PLX4720 IC50 distribution"
+	)
+
+# visualise the distribution by group using stripchart
+stripchart(
+	comb_data$drugs[,"PLX4720_RAF"] ~ comb_data$mutations[,"BRAF.MUT"],
+	vertical=TRUE,
+	pch=19,
+	col=rgb(0,0,0,0.5),
+	method="jitter",
+	group.names=c("WT", "mutant")
+	)
+
+# ggplot() is good for highly customisable data visualisation
+
+# try a non-parametric correlation test
+cor_example <- cor.test(
+	comb_data$mutations[,"BRAF.MUT"],
+	comb_data$drugs[,"PLX4720_RAF"],
+	na.rm=TRUE,
+	method="spearman"
+	)
+
+
+
 
 # try looping over the sets of measurements for
 # each mutation/CNV and each drug and then perform
@@ -72,8 +173,14 @@ for(marker in colnames(comb_data$mutations)){
 	for(drug in colnames(comb_data$drugs)){
 		# likewise, drug is now the column name of
 		# one of the columns in the drugs table
-		r <- r + 1
-		result <- NULL
+		
+		r <- r + 1		# initially r goes from
+							# 0 to 1 (first row), then
+							# r increments by 1
+		
+		result <- NULL	# clear any previous result
+								# in case cor.test() fails
+								# and the result is stale
 		result <- cor.test(
 			comb_data$mutations[,marker],
 			comb_data$drugs[,drug],
@@ -105,11 +212,12 @@ write.table(
 	quote=FALSE
 	)
 
-
-# now look at the following link for why this is a bad idea
+# now look at the following link for why this is not considered
+# good R coding. 
 # http://architects.dzone.com/articles/some-tips-r-data-frames
 
-# sort out the types...
+# sort out the types... marker and drug are character strings
+# rho and p.value are numeric
 comb_data_all_spearman_results <- data.frame(
 	marker=as.character(comb_data_all_spearman_results$marker),
 	drug=as.character(comb_data_all_spearman_results$drug),
@@ -123,7 +231,8 @@ comb_data_all_spearman_results <- data.frame(
 # the results table has been split into CNV and mutation
 # predictors. Read in and visualise
 
-
+# read in the previously run test results for the
+# mutation data
 comb_data_mut_spearman_results <- read.table(
 	file="comb_data_mut_spearman_results.txt",
 	sep="\t",
@@ -131,6 +240,8 @@ comb_data_mut_spearman_results <- read.table(
 	stringsAsFactors=FALSE
 	)
 
+# read in the previously run test results for the
+# copy number data
 comb_data_cnv_spearman_results <- read.table(
 	file="comb_data_cnv_spearman_results.txt",
 	sep="\t",
@@ -144,13 +255,19 @@ comb_data_cnv_spearman_results <- read.table(
 # Visualise the test results
 #
 
-# volcano plot
+# make a volcano plot - not very nice for spearman correlation
 plot(
-	comb_data_all_spearman_results$rho,
-	-log10(comb_data_all_spearman_results$p.value)
+	comb_data_cnv_spearman_results$rho,
+	-log10(comb_data_cnv_spearman_results$p.value),
+	pch=19,
+	col=rgb(0,0,0,0.25)
 	)
 
 
+# call a function (defined in the file we sourced earlier)
+# that ouputs a pdf file with multiple boxplots showing
+# IC50 for drugs in mutant and non-mutant groups of cell
+# lines
 boxplot_drugIC50_by_mutation(
 	results=comb_data_mut_spearman_results[which(
 		comb_data_mut_spearman_results$p.value <= 0.0000001
@@ -160,90 +277,33 @@ boxplot_drugIC50_by_mutation(
 	filename="boxplots_drug_IC50_by_mutations.pdf"
 	)
 
-
+# call another function that makes boxplots of
+# drug IC50 where cell lines were split by gene
+# copy number
 boxplot_drugIC50_by_copy_number(
 	results=comb_data_cnv_spearman_results[which(
-		comb_data_cnv_spearman_results$p.value <= 0.0000001
+		comb_data_cnv_spearman_results$p.value <= 0.001
 		),],
 	scores=comb_data$drugs,
 	mutations=comb_data$mutations,
-	filename="boxplots_drug_IC50_by_copy)number.pdf"
+	filename="boxplots_drug_IC50_by_copy_number.pdf"
 	)
 
 
-boxplot_drugIC50_by_mutation <- function(
-	results,
-	scores,
-	mutations,
-	filename
-	){
-	pdf(file=filename, width=2.5, height=3.5)
-	# turn off boxes for plots
-	par(bty="n", tcl=-0.2, mai=c(1, 0.95, 0.1, 0.1)) 
-	i <- NULL
-	for(i in 1:nrow(results)){
-		# start by setting all cell lines to wt
-		wt_mut_grps_strings <- rep(
-			"wt",
-			times=length(mutations[,results$marker[i]])
-			)
-		# set the recurrent/functional mutations
-		wt_mut_grps_strings[which(mutations[,results$marker[i]] == 1)] <- "mut"
-		wt_grp_rows <- which(wt_mut_grps_strings == "wt")
-		func_mut_grp_rows <- which(wt_mut_grps_strings == "mut")
-		# boxplot based on all data (wt and mut groups)
-		boxplot(
-			scores[wt_grp_rows,results$drug[i]],
-			scores[func_mut_grp_rows,results$drug[i]],
-			pch="",
-			names=c("wt", "mutant")
-			)
-		mtext(results$marker[i], 1, line=2, cex=0.8)
-		mtext("status", 1, line=3, cex=0.8)
-		mtext(results$drug[i], 2, line=3, cex=0.8)
-		mtext("log10 IC50 (µM)", 2, line=2, cex=0.8)
-		# jittrered points for each cell line
-		if(length(wt_grp_rows) > 0){
-			# plot at 1
-			points(
-				jitter(rep(1,times=length(wt_grp_rows)), amount=0.33),
-				scores[wt_grp_rows,results$drug[i]],
-				col=rgb(0,0,0,0.25),
-				pch=19
-				)
-		}
-		if(length(func_mut_grp_rows) > 0){
-			# plot at 2
-			points(
-				jitter(rep(2,times=length(func_mut_grp_rows)), amount=0.33), scores[func_mut_grp_rows,results$drug[i]], col=rgb(0,0,0,0.25), pch=19
-				)
-		}
-	}		
-	dev.off()
-}
+
+# call another function that makes scatter plots
+# of drug IC50 where cell lines were split by gene
+# copy number
+scatterplot_drugIC50_by_copy_number(
+	results=comb_data_cnv_spearman_results[which(
+		comb_data_cnv_spearman_results$p.value <= 0.001
+		),
+	],
+	scores=comb_data$drugs,
+	mutations=comb_data$mutations,
+	filename="scatterplots_drug_IC50_by_copy_number.pdf"
+	)
 
 
-boxplot_drugIC50_by_copy_number <- function(
-	results,
-	scores,
-	mutations,
-	filename
-	){
-	pdf(file=filename, width=10, height=3.5)
-	# turn off boxes for plots
-	par(bty="n", tcl=-0.2, mai=c(1, 0.95, 0.1, 0.1)) 
-	i <- NULL
-	for(i in 1:nrow(results)){
-		# boxplot IC50 dependent on CP
-		boxplot(
-			scores[,results$drug[i]] ~ mutations[,results$marker[i]]
-			)
-		mtext(results$marker[i], 1, line=2, cex=0.8)
-		mtext("copy number", 1, line=3, cex=0.8)
-		mtext(results$drug[i], 2, line=3, cex=0.8)
-		mtext("log10 IC50 (µM)", 2, line=2, cex=0.8)
-	}		
-	dev.off()
-}
 
 
