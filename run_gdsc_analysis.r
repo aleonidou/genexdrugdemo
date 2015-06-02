@@ -213,10 +213,28 @@ comb_data_all_spearman_results <- data.frame(
 	stringsAsFactors=FALSE
 	)
 
+# or just read the file back in as a dataframe
+comb_data_all_spearman_results <- read.table(
+	file="comb_data_all_spearman_results.txt",
+	header=TRUE,
+	sep="\t",
+	stringsAsFactors=FALSE
+	)
 
-# This should be changed for the actual demo but - for now
-# the results table has been split into CNV and mutation
-# predictors. Read in and visualise
+# separate the predictor (marker) rows the end in
+# '.CP' from those that end in '.MUT' and any others
+
+comb_data_cnv_spearman_results <- comb_data_all_spearman_results[
+	grep(".CP", comb_data_all_spearman_results$marker),]
+
+comb_data_mut_spearman_results <- comb_data_all_spearman_results[
+	grep(".MUT", comb_data_all_spearman_results$marker),]
+
+
+# To save time for the demo, the correlation tests have
+# already been run. We can read these in and visualise the 
+# results
+
 
 # read in the previously run test results for the
 # mutation data
