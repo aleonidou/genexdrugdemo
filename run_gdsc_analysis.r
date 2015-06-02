@@ -3,7 +3,12 @@
 # https://github.com/DrJCampbell/genexdrugdemo
 # ============================================ #
 
-# change the next line to the directory where your files are
+# ---------- #
+# get set up
+# ---------- #
+
+# change the next line to the directory where
+# the project files are
 setwd("./")
 
 # run the next line if gplots is not installed
@@ -12,6 +17,11 @@ require(gplots)
 
 # source (read in) some code from the following file
 source("./run_gdsc_functions.r")
+
+
+# --------------------------------------- #
+# read in the mutation and drug data sets
+# --------------------------------------- #
 
 # read a file with gene mutation and copy number data
 mutation_data <- read.table(
@@ -24,6 +34,7 @@ mutation_data <- read.table(
 	# 624 rows corresponding to cancer cell lines and 510
 	# columns corresponding to either mutation status [0/1]
 	# or infered absolute copy number values
+
 
 # read file with drug IC50 values
 drug_data <- read.table(
@@ -38,6 +49,9 @@ drug_data <- read.table(
 	# columns corresponding to IC50 values of compounds
 
 
+# ------------------------------- #
+# join the data sets for analysis
+# ------------------------------- #
 
 # find the common set of cell lines in the drug
 # and mutation data and sort asciibetically
@@ -62,9 +76,9 @@ comb_data <- list(
 	# and orders the rows as per common_cell_lines
 
 
-#
+# ----------------------- #
 # visualise the data sets
-#
+# ----------------------- #
 
 # create a colour pallete and breaks (data bin ranges)
 ic50_breaks=seq(-10, 10, by=0.2) 
@@ -90,8 +104,12 @@ heatmap(
 	col=cnv_col
 	)
 dev.off()
+# look at heatmap.2() for improved heatmap controls
 
 
+# ------------------------------------ #
+# Analyse a single gene x drug pairing
+# ------------------------------------ #
 
 # We can now run an analysis to identify drugs with 
 # IC50 values that differ between cell lines with 
@@ -139,6 +157,10 @@ dev.off()
 
 # ggplot module is good for highly customisable data visualisation
 
+
+# -------------------------------- #
+# Analyse all gene x drug pairings
+# -------------------------------- #
 
 # try looping over the sets of measurements for
 # each mutation/CNV and each drug and then perform
@@ -254,10 +276,10 @@ comb_data_cnv_spearman_results <- read.table(
 	stringsAsFactors=FALSE
 	)
 
-#
-# Visualise the test results
-#
 
+# -------------------------- #
+# Visualise the test results
+# -------------------------- #
 
 # call a function (defined in the file we sourced earlier)
 # that ouputs a pdf file with multiple boxplots showing
