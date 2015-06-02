@@ -258,13 +258,6 @@ comb_data_cnv_spearman_results <- read.table(
 # Visualise the test results
 #
 
-# make a volcano plot - not very nice for spearman correlation
-plot(
-	comb_data_cnv_spearman_results$rho,
-	-log10(comb_data_cnv_spearman_results$p.value),
-	pch=19,
-	col=rgb(0,0,0,0.25)
-	)
 
 # call a function (defined in the file we sourced earlier)
 # that ouputs a pdf file with multiple boxplots showing
@@ -272,7 +265,7 @@ plot(
 # lines
 boxplot_drugIC50_by_mutation(
 	results=comb_data_mut_spearman_results[which(
-		comb_data_mut_spearman_results$p.value <= 0.0000001
+		comb_data_mut_spearman_results$p.value <= 1e-06
 		),],
 	scores=comb_data$drugs,
 	mutations=comb_data$mutations,
@@ -306,5 +299,6 @@ scatterplot_drugIC50_by_copy_number(
 	)
 
 
-
-
+# ======= #
+# The end
+# ======= #
