@@ -6,28 +6,26 @@
 # change the next line to the directory where your files are
 setwd("./")
 
-# check this is installed...
+# run the next line if gplots is not installed
+# install.packages("gplots", dependencies=TRUE)
 require(gplots)
 
-# source (read in) some code in the
-# following file.
+# source (read in) some code from the following file
 source("./run_gdsc_functions.r")
 
-# file with gene mutations and copy number calls
+# read a file with gene mutation and copy number data
 mutation_data <- read.table(
 	file="gdsc_CNV_mutation_predictors.txt",
 	sep="\t",
 	header=TRUE,
 	row.names=1
 	)
+	# mutation data now contains a table (data.frame) with
+	# 624 rows corresponding to cancer cell lines and 510
+	# columns corresponding to either mutation status [0/1]
+	# or infered absolute copy number values
 
-# mutation data now contains a table (data.frame) with
-# 624 rows corresponding to cancer cell lines and 510
-# columns corresponding to either mutation status [0/1]
-# or infered absolute copy number values
-
-
-# drug IC50 values
+# read file with drug IC50 values
 drug_data <- read.table(
 	file="gdsc_ic50_data.txt",
 	sep="\t",
@@ -35,22 +33,11 @@ drug_data <- read.table(
 	row.names=1,
 	stringsAsFactors=FALSE
 	)
-
-# Similarly, mutation data now contains a table 
-# 707 rows corresponding to cancer cell lines and 140
-# columns corresponding to IC50 values of compounds
-
+	# Similarly, mutation data now contains a table 
+	# 707 rows corresponding to cancer cell lines and 140
+	# columns corresponding to IC50 values of compounds
 
 
-# additional information about the cancer cell lines
-# (site etc.). This is not used and can be droppped
-cell_line_info <- read.table(
-	file="gdsc_cell_line_info.txt",
-	sep="\t",
-	header=TRUE,
-	row.names=1,
-	stringsAsFactors=FALSE
-	)
 
 # find the common set of cell lines in the drug
 # and mutation data and sort asciibetically
@@ -60,10 +47,9 @@ common_cell_lines <- sort(
 		rownames(drug_data)
 		)
 	)
-# sort() sorts a list of things
-# intersect() finds the common things in two lists
-# rownames() gets the names of the rows in a table
-
+	# sort() sorts a list of things
+	# intersect() finds the common things in two lists
+	# rownames() gets the names of the rows in a table
 
 # make a list holding the tables of data with
 # the common cell lines
@@ -71,36 +57,32 @@ comb_data <- list(
 	mutations = mutation_data[common_cell_lines,],
 	drugs = drug_data[common_cell_lines,]
 	)
-
-# mutation_data[common_cell_lines,] chooses rows
-# from mutation_data that are in common_cell_lines
-# and orders the rows as per common_cell_lines
+	# mutation_data[common_cell_lines,] chooses rows
+	# from mutation_data that are in common_cell_lines
+	# and orders the rows as per common_cell_lines
 
 
 #
 # visualise the data sets
 #
 
-# create a colour pallete
-
+# create a colour pallete and breaks (data bin ranges)
 ic50_breaks=seq(-10, 10, by=0.2) 
 ic50_breaks=append(ic50_breaks, 40)
 ic50_breaks=append(ic50_breaks, -40, 0)
 ic50_col <- colorpanel(n=length(ic50_breaks)-1,low="blue", high="white")
 
-
-# avoiding clustering works OK
+# Make a really basic heatmap of the drug IC50s
+pdf("ic50_data_heatmap_default.pdf", width=50, height=50)
 image(
 	as.matrix(comb_data$drugs),
-	na.rm=TRUE,
 	col=ic50_col
 	)
+dev.off()
 
+# Make a heatmap of mutation and copy number values
 cnv_breaks=seq(0, 10, by=1) 
-#cnv_breaks=append(cnv_breaks, 40)
-#cnv_breaks=append(cnv_breaks, -40, 0)
 cnv_col <- colorpanel(n=length(cnv_breaks)-1,low="white",  high="red")
-
 pdf("mutation_data_heatmap_default.pdf", width=50, height=50)
 heatmap(
 	as.matrix(comb_data$mutations),
@@ -115,34 +97,15 @@ dev.off()
 # IC50 values that differ between cell lines with 
 # different mutation status or CNV
 
-# first, try a single correlation test
-cor_example <- cor.test(
-	comb_data$mutations[,"BRAF.MUT"],
-	comb_data$drugs[,"PLX4720_RAF"],
-	na.rm=TRUE
-	)
-
 # look at the distribution
 hist(
 	comb_data$drugs[,"PLX4720_RAF"],
 	breaks=50,
 	xlab="PLX4720 (RAFi) IC50 (µM)",
-	main="Histogram showing PLX4720 IC50 distribution"
+	main="Histogram showing PLX4720 log10 IC50 distribution"
 	)
 
-# visualise the distribution by group using stripchart
-stripchart(
-	comb_data$drugs[,"PLX4720_RAF"] ~ comb_data$mutations[,"BRAF.MUT"],
-	vertical=TRUE,
-	pch=19,
-	col=rgb(0,0,0,0.5),
-	method="jitter",
-	group.names=c("WT", "mutant")
-	)
-
-# ggplot() is good for highly customisable data visualisation
-
-# try a non-parametric correlation test
+# non-parametric correlation test
 cor_example <- cor.test(
 	comb_data$mutations[,"BRAF.MUT"],
 	comb_data$drugs[,"PLX4720_RAF"],
@@ -150,7 +113,31 @@ cor_example <- cor.test(
 	method="spearman"
 	)
 
+# look at what is available in cor_example
+str(cor_example)
 
+# output visualisations of RAFi response dependent on BRAF mutation to a PDF
+pdf("box_and_stripchart_BRAF_RAFi.pdf", width=3, height=4.5)
+	# visualise the distribution by group using stripchart
+	stripchart(
+		comb_data$drugs[,"PLX4720_RAF"] ~ comb_data$mutations[,"BRAF.MUT"],
+		vertical=TRUE,
+		pch=19,
+		col=rgb(0,0,0,0.5),
+		method="jitter",
+		group.names=c("WT", "mutant"),
+		ylab="PLX4720 (RAFi) log10 IC50 (µM)"
+		)
+
+	# visualise the distribution by group using boxplot
+	boxplot(
+		comb_data$drugs[,"PLX4720_RAF"] ~ comb_data$mutations[,"BRAF.MUT"],
+		group.names=c("WT", "mutant"),
+		ylab="PLX4720 (RAFi) log10 IC50 (µM)"
+		)
+dev.off()
+
+# ggplot module is good for highly customisable data visualisation
 
 
 # try looping over the sets of measurements for
@@ -213,7 +200,7 @@ write.table(
 	)
 
 # now look at the following link for why this is not considered
-# good R coding. 
+# good R coding style. 
 # http://architects.dzone.com/articles/some-tips-r-data-frames
 
 # sort out the types... marker and drug are character strings
@@ -249,8 +236,6 @@ comb_data_cnv_spearman_results <- read.table(
 	stringsAsFactors=FALSE
 	)
 
-
-
 #
 # Visualise the test results
 #
@@ -262,7 +247,6 @@ plot(
 	pch=19,
 	col=rgb(0,0,0,0.25)
 	)
-
 
 # call a function (defined in the file we sourced earlier)
 # that ouputs a pdf file with multiple boxplots showing
@@ -288,7 +272,6 @@ boxplot_drugIC50_by_copy_number(
 	mutations=comb_data$mutations,
 	filename="boxplots_drug_IC50_by_copy_number.pdf"
 	)
-
 
 
 # call another function that makes scatter plots
