@@ -150,7 +150,7 @@ pdf("box_and_stripchart_BRAF_RAFi.pdf", width=3, height=4.5)
 	# visualise the distribution by group using boxplot
 	boxplot(
 		comb_data$drugs[,"PLX4720_RAF"] ~ comb_data$mutations[,"BRAF.MUT"],
-		group.names=c("WT", "mutant"),
+		names=c("WT", "mutant"),
 		ylab="PLX4720 (RAFi) log10 IC50 (µM)"
 		)
 dev.off()
